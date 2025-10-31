@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>温馨提示弹窗</title>
     <style>
         * {
@@ -17,6 +17,17 @@
             min-height: 100vh;
             overflow: hidden;
             position: relative;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* 移动端优化 */
+        @media screen and (max-width: 768px) {
+            body {
+                touch-action: pan-y;
+            }
+            html {
+                touch-action: manipulation;
+            }
         }
 
         body::before {
@@ -73,6 +84,9 @@
             border-radius: 12px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
             cursor: move;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
             z-index: 1000;
             transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s;
             overflow: hidden;
@@ -81,6 +95,25 @@
             animation: popupAppear 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards,
                        float 3s ease-in-out infinite 0.6s,
                        glow 2s ease-in-out infinite 0.6s;
+        }
+
+        /* 移动端适配 */
+        @media screen and (max-width: 768px) {
+            .popup {
+                width: calc(90vw - 40px);
+                max-width: 280px;
+                min-height: 100px;
+                font-size: 14px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .popup {
+                width: calc(85vw - 30px);
+                max-width: 250px;
+                min-height: 90px;
+                border-radius: 10px;
+            }
         }
 
         @keyframes popupAppear {
@@ -146,6 +179,15 @@
             font-weight: bold;
             color: white;
             user-select: none;
+            -webkit-user-select: none;
+        }
+
+        @media screen and (max-width: 480px) {
+            .popup-header {
+                height: 32px;
+                padding: 0 10px;
+                font-size: 13px;
+            }
         }
 
         .popup-title {
@@ -171,6 +213,16 @@
             background: rgba(255, 255, 255, 0.3);
             color: white;
             font-weight: bold;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        @media screen and (max-width: 480px) {
+            .popup-btn {
+                width: 22px;
+                height: 22px;
+                font-size: 14px;
+            }
         }
 
         .popup-btn:hover {
@@ -186,6 +238,24 @@
             text-align: center;
             animation: textShine 2s ease-in-out infinite;
             font-weight: 500;
+            word-wrap: break-word;
+            word-break: break-all;
+        }
+
+        @media screen and (max-width: 768px) {
+            .popup-content {
+                padding: 15px 12px;
+                font-size: 15px;
+                line-height: 1.5;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .popup-content {
+                padding: 12px 10px;
+                font-size: 14px;
+                line-height: 1.4;
+            }
         }
 
         .color-blue {
@@ -345,9 +415,11 @@
             const popup = document.createElement('div');
             popup.className = `popup ${color}`;
             
-            // 随机位置（避免重叠）
-            const maxX = window.innerWidth - 280;
-            const maxY = window.innerHeight - 150;
+            // 随机位置（避免重叠，适配移动端）
+            const popupWidth = window.innerWidth <= 480 ? 250 : 280;
+            const popupHeight = window.innerWidth <= 480 ? 90 : 120;
+            const maxX = window.innerWidth - popupWidth;
+            const maxY = window.innerHeight - popupHeight;
             const x = Math.max(0, Math.random() * Math.max(0, maxX));
             const y = Math.max(0, Math.random() * Math.max(0, maxY));
             
@@ -377,8 +449,10 @@
             allPopups.push(popup);
             popupCount++;
             
-            // 添加粒子特效
-            createParticles(x + 140, y + 60);
+            // 添加粒子特效（适配移动端位置）
+            const centerX = window.innerWidth <= 480 ? x + 125 : x + 140;
+            const centerY = window.innerWidth <= 480 ? y + 45 : y + 60;
+            createParticles(centerX, centerY);
 
             // 添加拖拽功能
             setupDrag(popup);
@@ -401,10 +475,11 @@
             }, 300);
         }
 
-        // 设置拖拽功能
+        // 设置拖拽功能（支持鼠标和触摸）
         function setupDrag(popup) {
             const header = popup.querySelector('.popup-header');
 
+            // 鼠标事件
             header.addEventListener('mousedown', (e) => {
                 if (e.target.classList.contains('popup-btn')) return;
                 
@@ -418,6 +493,22 @@
                 e.preventDefault();
             });
 
+            // 触摸事件
+            header.addEventListener('touchstart', (e) => {
+                if (e.target.classList.contains('popup-btn')) return;
+                
+                isDragging = true;
+                currentPopup = popup;
+                const touch = e.touches[0];
+                const rect = popup.getBoundingClientRect();
+                offsetX = touch.clientX - rect.left;
+                offsetY = touch.clientY - rect.top;
+                
+                popup.style.zIndex = 2000;
+                e.preventDefault();
+            });
+
+            // 鼠标移动
             document.addEventListener('mousemove', (e) => {
                 if (!isDragging || currentPopup !== popup) return;
 
@@ -434,7 +525,39 @@
                 popup.style.top = `${y}px`;
             });
 
+            // 触摸移动
+            document.addEventListener('touchmove', (e) => {
+                if (!isDragging || currentPopup !== popup) return;
+                
+                const touch = e.touches[0];
+                let x = touch.clientX - offsetX;
+                let y = touch.clientY - offsetY;
+
+                // 边界限制
+                const maxX = window.innerWidth - popup.offsetWidth;
+                const maxY = window.innerHeight - popup.offsetHeight;
+                x = Math.max(0, Math.min(x, maxX));
+                y = Math.max(0, Math.min(y, maxY));
+
+                popup.style.left = `${x}px`;
+                popup.style.top = `${y}px`;
+                
+                e.preventDefault();
+            });
+
+            // 鼠标释放
             document.addEventListener('mouseup', () => {
+                isDragging = false;
+                currentPopup = null;
+            });
+
+            // 触摸释放
+            document.addEventListener('touchend', () => {
+                isDragging = false;
+                currentPopup = null;
+            });
+
+            document.addEventListener('touchcancel', () => {
                 isDragging = false;
                 currentPopup = null;
             });
@@ -462,7 +585,7 @@
                 autoCreatePopup();
             }, 500);
 
-            // 双击页面创建新弹窗
+            // 双击页面创建新弹窗（桌面端）
             document.addEventListener('dblclick', (e) => {
                 if (e.target.classList.contains('popup') || 
                     e.target.closest('.popup')) {
@@ -470,6 +593,7 @@
                 }
                 createPopup();
             });
+
 
             // 右键菜单创建弹窗
             document.addEventListener('contextmenu', (e) => {
