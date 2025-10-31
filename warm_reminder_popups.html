@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>温馨提示弹窗</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 50%, #ff9a9e 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(255, 182, 193, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 218, 185, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(255, 160, 122, 0.2) 0%, transparent 50%);
+            animation: backgroundMove 20s ease-in-out infinite;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.03) 2px, rgba(255, 255, 255, 0.03) 4px);
+            pointer-events: none;
+            animation: sparkle 3s linear infinite;
+        }
+
+        @keyframes backgroundMove {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(-10px, -10px) scale(1.02); }
+            66% { transform: translate(10px, 10px) scale(0.98); }
+        }
+
+        @keyframes sparkle {
+            0% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+            100% { opacity: 0.3; }
+        }
+
+        @keyframes particleMove {
+            to {
+                transform: translate(var(--end-x), var(--end-y)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        .popup {
+            position: absolute;
+            width: 280px;
+            min-height: 120px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            cursor: move;
+            z-index: 1000;
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s;
+            overflow: hidden;
+            opacity: 0;
+            transform: scale(0.8);
+            animation: popupAppear 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards,
+                       float 3s ease-in-out infinite 0.6s,
+                       glow 2s ease-in-out infinite 0.6s;
+        }
+
+        @keyframes popupAppear {
+            0% {
+                opacity: 0;
+                transform: scale(0.3) translateY(-30px) rotate(-10deg);
+            }
+            50% {
+                transform: scale(1.1) translateY(5px) rotate(5deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0) rotate(0deg);
+            }
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px) rotate(0deg);
+            }
+            25% {
+                transform: translateY(-5px) rotate(1deg);
+            }
+            75% {
+                transform: translateY(5px) rotate(-1deg);
+            }
+        }
+
+        @keyframes glow {
+            0%, 100% {
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 20px rgba(255, 255, 255, 0.3);
+            }
+            50% {
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 30px rgba(255, 255, 255, 0.5);
+            }
+        }
+
+        @keyframes textShine {
+            0%, 100% {
+                text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+            }
+            50% {
+                text-shadow: 0 0 15px rgba(255, 255, 255, 0.8), 0 0 25px rgba(255, 255, 255, 0.6);
+            }
+        }
+
+        .popup:hover {
+            transform: scale(1.08) rotate(2deg) !important;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4), 0 0 40px rgba(255, 255, 255, 0.6) !important;
+            z-index: 2000;
+            animation: popupAppear 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards,
+                       float 2s ease-in-out infinite,
+                       glow 1.5s ease-in-out infinite;
+        }
+
+        .popup-header {
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            user-select: none;
+        }
+
+        .popup-title {
+            flex: 1;
+        }
+
+        .popup-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .popup-btn {
+            width: 18px;
+            height: 18px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            font-weight: bold;
+        }
+
+        .popup-btn:hover {
+            transform: scale(1.2);
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .popup-content {
+            padding: 20px 15px;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #333;
+            text-align: center;
+            animation: textShine 2s ease-in-out infinite;
+            font-weight: 500;
+        }
+
+        .color-blue {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+        }
+
+        .color-green {
+            background: linear-gradient(135deg, #55efc4 0%, #00b894 100%);
+        }
+
+        .color-pink {
+            background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+        }
+
+        .color-orange {
+            background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+        }
+
+        .color-yellow {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+        }
+
+        .color-purple {
+            background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
+        }
+
+        .color-cyan {
+            background: linear-gradient(135deg, #81ecec 0%, #00cec9 100%);
+        }
+
+        .color-coral {
+            background: linear-gradient(135deg, #fab1a0 0%, #e17055 100%);
+        }
+
+    </style>
+</head>
+<body>
+
+    <script>
+        // 温馨提醒消息列表
+        const messages = [
+            "天天开心",
+            "别熬夜",
+            "早点休息",
+            "多喝热水哦～",
+            "记得好好吃饭",
+            "好好爱自己",
+            "保持好心情",
+            "保持微笑",
+            "天冷了多穿衣服",
+            "多喝水哦~",
+            "今天过得开心嘛",
+            "记得吃水果",
+            "愿所有烦恼都消失",
+            "期待下一次见面",
+            "每天都要元气满满",
+            "天冷了，多穿衣服",
+            "保持微笑呀",
+            "我想你了",
+            "梦想成真",
+            "顺顺利利",
+            "金榜题名",
+            "每天都是新开始",
+            "相信自己",
+            "一切都会好起来的",
+            "记得按时吃饭",
+            "保持健康作息",
+            "让心情放松一下",
+            "做自己喜欢的事",
+            "珍惜当下",
+            "你是最棒的",
+            "记得照顾好自己",
+            "保持积极心态",
+            "今天也要加油",
+            "慢一点也没关系",
+            "生活很美好"
+        ];
+
+        // 颜色类列表
+        const colors = [
+            'color-blue', 'color-green', 'color-pink', 
+            'color-orange', 'color-yellow', 'color-purple',
+            'color-cyan', 'color-coral'
+        ];
+
+        // 最大弹窗数量（防止性能问题）
+        const MAX_POPUPS = 100;
+        // 自动创建间隔（毫秒），最慢0.5秒
+        const MIN_INTERVAL = 100;
+        const MAX_INTERVAL = 500;
+        let popupCount = 0;
+        let isDragging = false;
+        let currentPopup = null;
+        let offsetX = 0;
+        let offsetY = 0;
+        let autoCreateTimer = null;
+        let allPopups = []; // 存储所有弹窗引用
+
+        // 创建粒子特效
+        function createParticles(x, y) {
+            for (let i = 0; i < 8; i++) {
+                const particle = document.createElement('div');
+                particle.style.position = 'fixed';
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+                particle.style.width = '4px';
+                particle.style.height = '4px';
+                particle.style.borderRadius = '50%';
+                particle.style.background = `rgba(255, 255, 255, ${0.6 + Math.random() * 0.4})`;
+                particle.style.pointerEvents = 'none';
+                particle.style.zIndex = '9999';
+                
+                const angle = (Math.PI * 2 * i) / 8;
+                const distance = 30 + Math.random() * 20;
+                const duration = 0.6 + Math.random() * 0.4;
+                
+                particle.style.animation = `particleMove ${duration}s ease-out forwards`;
+                particle.style.setProperty('--end-x', `${Math.cos(angle) * distance}px`);
+                particle.style.setProperty('--end-y', `${Math.sin(angle) * distance}px`);
+                
+                document.body.appendChild(particle);
+                
+                setTimeout(() => {
+                    particle.remove();
+                }, duration * 1000);
+            }
+        }
+
+        // 删除最旧的弹窗（当达到上限时）
+        function removeOldestPopup() {
+            if (allPopups.length > 0) {
+                const oldest = allPopups.shift();
+                oldest.style.transition = 'opacity 0.3s, transform 0.3s';
+                oldest.style.opacity = '0';
+                oldest.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    if (oldest.parentNode) {
+                        oldest.remove();
+                    }
+                    popupCount--;
+                }, 300);
+            }
+        }
+
+        // 创建弹窗
+        function createPopup() {
+            // 如果达到上限，删除最旧的弹窗
+            if (popupCount >= MAX_POPUPS) {
+                removeOldestPopup();
+            }
+
+            // 随机选择消息和颜色
+            const message = messages[Math.floor(Math.random() * messages.length)];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+
+            // 创建弹窗元素
+            const popup = document.createElement('div');
+            popup.className = `popup ${color}`;
+            
+            // 随机位置（避免重叠）
+            const maxX = window.innerWidth - 280;
+            const maxY = window.innerHeight - 150;
+            const x = Math.max(0, Math.random() * Math.max(0, maxX));
+            const y = Math.max(0, Math.random() * Math.max(0, maxY));
+            
+            popup.style.left = `${x}px`;
+            popup.style.top = `${y}px`;
+
+            // 弹窗内容
+            popup.innerHTML = `
+                <div class="popup-header">
+                    <span class="popup-title">温馨提示</span>
+                    <div class="popup-controls">
+                        <button class="popup-btn" onclick="removePopup(this.closest('.popup'))">−</button>
+                        <button class="popup-btn" onclick="removePopup(this.closest('.popup'))">×</button>
+                    </div>
+                </div>
+                <div class="popup-content">${message}</div>
+            `;
+
+            // 添加到页面
+            document.body.appendChild(popup);
+            
+            // 添加随机延迟动画
+            const delay = Math.random() * 0.3;
+            popup.style.animationDelay = `${delay}s`;
+            
+            // 添加到弹窗数组
+            allPopups.push(popup);
+            popupCount++;
+            
+            // 添加粒子特效
+            createParticles(x + 140, y + 60);
+
+            // 添加拖拽功能
+            setupDrag(popup);
+        }
+
+        // 移除弹窗的通用函数
+        function removePopup(popup) {
+            const index = allPopups.indexOf(popup);
+            if (index > -1) {
+                allPopups.splice(index, 1);
+            }
+            popup.style.transition = 'opacity 0.3s, transform 0.3s';
+            popup.style.opacity = '0';
+            popup.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                if (popup.parentNode) {
+                    popup.remove();
+                }
+                popupCount--;
+            }, 300);
+        }
+
+        // 设置拖拽功能
+        function setupDrag(popup) {
+            const header = popup.querySelector('.popup-header');
+
+            header.addEventListener('mousedown', (e) => {
+                if (e.target.classList.contains('popup-btn')) return;
+                
+                isDragging = true;
+                currentPopup = popup;
+                const rect = popup.getBoundingClientRect();
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+                
+                popup.style.zIndex = 2000;
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging || currentPopup !== popup) return;
+
+                let x = e.clientX - offsetX;
+                let y = e.clientY - offsetY;
+
+                // 边界限制
+                const maxX = window.innerWidth - popup.offsetWidth;
+                const maxY = window.innerHeight - popup.offsetHeight;
+                x = Math.max(0, Math.min(x, maxX));
+                y = Math.max(0, Math.min(y, maxY));
+
+                popup.style.left = `${x}px`;
+                popup.style.top = `${y}px`;
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                currentPopup = null;
+            });
+        }
+
+        // 自动创建弹窗的函数
+        function autoCreatePopup() {
+            createPopup();
+            
+            // 随机间隔时间（0.1-0.5秒）
+            const interval = Math.floor(Math.random() * (MAX_INTERVAL - MIN_INTERVAL + 1)) + MIN_INTERVAL;
+            
+            autoCreateTimer = setTimeout(autoCreatePopup, interval);
+        }
+
+        // 初始化：创建初始弹窗
+        function init() {
+            // 创建3个初始弹窗
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => createPopup(), i * 300);
+            }
+
+            // 立即启动自动创建
+            setTimeout(() => {
+                autoCreatePopup();
+            }, 500);
+
+            // 双击页面创建新弹窗
+            document.addEventListener('dblclick', (e) => {
+                if (e.target.classList.contains('popup') || 
+                    e.target.closest('.popup')) {
+                    return;
+                }
+                createPopup();
+            });
+
+            // 右键菜单创建弹窗
+            document.addEventListener('contextmenu', (e) => {
+                if (e.target.classList.contains('popup') || 
+                    e.target.closest('.popup')) {
+                    return;
+                }
+                e.preventDefault();
+                createPopup();
+            });
+
+            // 窗口大小改变时调整弹窗位置
+            window.addEventListener('resize', () => {
+                allPopups.forEach(popup => {
+                    const rect = popup.getBoundingClientRect();
+                    const maxX = window.innerWidth - popup.offsetWidth;
+                    const maxY = window.innerHeight - popup.offsetHeight;
+                    let x = parseFloat(popup.style.left);
+                    let y = parseFloat(popup.style.top);
+                    
+                    x = Math.max(0, Math.min(x, maxX));
+                    y = Math.max(0, Math.min(y, maxY));
+                    
+                    popup.style.left = `${x}px`;
+                    popup.style.top = `${y}px`;
+                });
+            });
+        }
+
+        // 页面加载完成后初始化
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
